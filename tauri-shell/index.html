@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
+    <title>Paddy Potification</title>
+    <style>
+      :root {
+        --void: #0c0a1e;
+        --deep: #110e2a;
+        --surface: #1a1640;
+        --input: #16133a;
+        --border: #2d2760;
+        --border-light: #3a3370;
+        --primary: #f0eef5;
+        --muted: #948dae;
+        --ghost: #8a83ad;
+        --accent: #9b7af0;
+        --accent-dim: #7c5cd4;
+        --font-mono: 'SF Mono', 'JetBrains Mono', 'Fira Code', ui-monospace, monospace;
+      }
+      * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+      html, body { margin: 0; height: 100%; }
+      body {
+        background: linear-gradient(180deg, var(--deep), var(--void));
+        color: var(--primary);
+        font: 13px/1.5 var(--font-mono);
+        -webkit-font-smoothing: antialiased;
+        display: flex; align-items: center; justify-content: center;
+        padding: max(24px, env(safe-area-inset-top)) 24px calc(24px + env(safe-area-inset-bottom));
+        min-height: 100dvh;
+      }
+      .box { width: 100%; max-width: 340px; text-align: center; }
+      .logo { color: var(--accent); margin-bottom: 12px; filter: drop-shadow(0 0 10px rgba(155,122,240,0.4)); }
+      h1 { font-size: 16px; margin: 0 0 4px; font-weight: 700; color: var(--primary); letter-spacing: 0.3px; }
+      .tag { color: var(--muted); font-size: 12px; margin: 0 0 26px; }
+      .status { color: var(--muted); font-size: 12px; min-height: 20px; margin-bottom: 18px; word-break: break-all; }
+      .status b { color: var(--primary); font-weight: 600; }
+      .spinner {
+        width: 30px; height: 30px; margin: 0 auto 20px; border-radius: 50%;
+        border: 3px solid var(--border); border-top-color: var(--accent);
+        animation: spin .8s linear infinite;
+      }
+      @keyframes spin { to { transform: rotate(360deg); } }
+      .btn {
+        display: inline-block; border: 1px solid var(--accent); background: var(--accent-dim);
+        color: #fff; padding: 11px 16px; border-radius: 10px; font-size: 13px; font-weight: 700;
+        cursor: pointer; width: 100%; font-family: var(--font-mono);
+      }
+      .link { color: var(--muted); font-size: 12px; background: none; border: none; cursor: pointer; margin-top: 16px; text-decoration: underline; font-family: var(--font-mono); }
+      .editor { display: none; text-align: left; margin-top: 8px; }
+      .editor.show { display: block; }
+      label { display: block; font-size: 11px; color: var(--muted); margin: 0 0 6px; }
+      input {
+        width: 100%; padding: 11px 13px; border-radius: 10px; border: 1px solid var(--border);
+        background: var(--input); color: var(--primary); font-size: 14px; margin-bottom: 12px; font-family: var(--font-mono);
+      }
+      .hint { color: var(--ghost); font-size: 11px; margin-top: 14px; line-height: 1.5; }
+    </style>
+  </head>
+  <body>
+    <div class="box">
+      <div class="logo">
+        <svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" />
+          <path d="M13.7 21a2 2 0 0 1-3.4 0" />
+        </svg>
+      </div>
+      <h1>Paddy Potification</h1>
+      <p class="tag">Live Claude Code session board</p>
+
+      <div id="connecting">
+        <div class="spinner"></div>
+        <p class="status">Connecting to <b id="target"></b>…</p>
+        <button class="link" id="change">Change address</button>
+      </div>
+
+      <div class="editor" id="editor">
+        <label for="url">Your Mac's dashboard address</label>
+        <input id="url" type="url" inputmode="url" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="http://your-mac.local:4747" />
+        <button class="btn" id="connect">Connect</button>
+        <p class="hint">
+          The machine running Paddy (or <b>npm&nbsp;run&nbsp;dev</b>). Use your Mac's Bonjour name
+          (<code>.local</code>) so it keeps working when the IP changes, or its LAN IP. Both devices
+          must be on the same Wi-Fi.
+        </p>
+      </div>
+    </div>
+
+    <script>
+      var isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+        (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+      // Desktop uses 127.0.0.1 (not localhost): the hooks post to 127.0.0.1, and
+      // resolving localhost can land on ::1 and hit a different server instance.
+      // iOS has no knowable default (every Mac's address differs) — first launch asks.
+      var DEFAULT_URL = isIOS ? '' : 'http://127.0.0.1:4747';
+      var KEY = 'paddy.server';
+      var target = localStorage.getItem(KEY) || DEFAULT_URL;
+      if (!isIOS && /^https?:\/\/(localhost|127\.0\.0\.1):3000\/?$/i.test(target)) {
+        target = DEFAULT_URL; // migrate a saved pre-4747 default
+        localStorage.setItem(KEY, target);
+      }
+
+      var el = function (id) { return document.getElementById(id); };
+      el('target').textContent = target;
+      el('url').value = target;
+      if (!target) {
+        el('connecting').style.display = 'none';
+        el('editor').classList.add('show');
+      }
+
+      var cancelled = false;
+      function connectTo(u) {
+        u = (u || '').trim();
+        if (!u) return;
+        if (!/^https?:\/\//i.test(u)) u = 'http://' + u;
+        localStorage.setItem(KEY, u);
+        window.location.replace(u);
+      }
+      function ping(u) {
+        return fetch(u.replace(/\/$/, '') + '/api/sessions', { mode: 'no-cors', cache: 'no-store' })
+          .then(function () { return true; })
+          .catch(function () { return false; });
+      }
+      function delay(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
+      async function autoConnect(u) {
+        for (var i = 0; i < 24 && !cancelled; i++) {
+          if (await ping(u)) { if (!cancelled) connectTo(u); return; }
+          await delay(350);
+        }
+        if (!cancelled) connectTo(u);
+      }
+      if (target) autoConnect(target);
+
+      el('change').addEventListener('click', function () {
+        cancelled = true;
+        el('connecting').style.display = 'none';
+        el('editor').classList.add('show');
+        el('url').focus();
+      });
+      el('connect').addEventListener('click', function () { connectTo(el('url').value); });
+      el('url').addEventListener('keydown', function (e) { if (e.key === 'Enter') connectTo(el('url').value); });
+    </script>
+  </body>
+</html>

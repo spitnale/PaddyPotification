@@ -1,0 +1,31 @@
+{
+  "name": "paddy-potification",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev -H 0.0.0.0 -p 4747",
+    "build": "next build",
+    "build:server": "next build && node scripts/assemble-server.mjs",
+    "start": "next start -H 0.0.0.0 -p 4747",
+    "install-hooks": "node scripts/install-hooks.mjs",
+    "uninstall-hooks": "node scripts/uninstall-hooks.mjs",
+    "fix-notifications": "killall usernoted NotificationCenter || true",
+    "tauri": "tauri",
+    "ios:init": "tauri ios init && bash scripts/patch-ios-plist.sh",
+    "ios:dev": "tauri ios dev",
+    "ios:build": "tauri ios build",
+    "patch-ios": "bash scripts/patch-ios-plist.sh"
+  },
+  "dependencies": {
+    "@fontsource/jetbrains-mono": "^5.2.8",
+    "@tauri-apps/api": "^2.11.1",
+    "@tauri-apps/plugin-autostart": "^2.5.1",
+    "@tauri-apps/plugin-notification": "^2.3.3",
+    "next": "^15.1.6",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.11.4"
+  }
+}

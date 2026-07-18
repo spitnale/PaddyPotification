@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <!-- macOS menu-bar template icon: the bell glyph alone, black on alpha.
+       The system tints it (white/dark) to match the rest of the menu bar.
+       Strokes are heavier than the app icon's so it stays legible at 18pt. -->
+  <g fill="none" stroke="#000" stroke-width="42" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M360 216 a104 104 0 0 0 -208 0 c0 84 -40 108 -40 108 h288 s-40 -24 -40 -108"/>
+    <path d="M290 360 a34 30 0 0 1 -68 0"/>
+  </g>
+  <circle cx="256" cy="104" r="26" fill="#000"/>
+</svg>

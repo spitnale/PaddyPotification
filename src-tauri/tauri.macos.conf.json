@@ -1,0 +1,9 @@
+{
+  "build": {
+    "beforeBuildCommand": "npm run build:server"
+  },
+  "bundle": {
+    "externalBin": ["binaries/node"],
+    "resources": ["server-bundle"]
+  }
+}
